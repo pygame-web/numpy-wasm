@@ -19,6 +19,22 @@ PY=${SDKROOT}/python3-wasm
 git restore .
 git pull
 
+cat > meson-python-cross-file.ini  << END
+[host_machine]
+system = 'emscripten'
+cpu_family = 'wasm'
+cpu = 'wasm'
+endian = 'little'
+
+[binaries]
+c = 'emcc'
+cpp = 'em++'
+ar = 'llvm-ar'
+strip = 'llvm-strip'
+exe_wrapper = 'node'
+
+END
+
 patch -p1 <<END
 diff --git a/numpy/_core/meson.build b/numpy/_core/meson.build
 index 113adb5f7..0e9db9bfb 100644
@@ -43,7 +59,7 @@ CC=emcc CXX=em++ \
  -Csetup-args="-Ddisable-threading=true" \
  -Csetup-args="-Dmkl-threading=false" \
  -Csetup-args="-Dallow-noblas=true" \
- -Csetup-args="--cross-file=/data/git/numpy-wasm/meson-python-cross-file.ini" \
+ -Csetup-args="--cross-file=$(pwd)/meson-python-cross-file.ini" \
  --no-isolation .
 
 # -Csetup-args="-Ddisable-highway=true" \
