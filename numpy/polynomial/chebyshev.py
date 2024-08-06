@@ -670,6 +670,10 @@ def chebmulx(c):
     out : ndarray
         Array representing the result of the multiplication.
 
+    See Also
+    --------
+    chebadd, chebsub, chebmul, chebdiv, chebpow
+
     Notes
     -----
 
@@ -1423,7 +1427,7 @@ def chebvander(x, deg):
     if ideg < 0:
         raise ValueError("deg must be non-negative")
 
-    x = np.array(x, copy=False, ndmin=1) + 0.0
+    x = np.array(x, copy=None, ndmin=1) + 0.0
     dims = (ideg + 1,) + x.shape
     dtyp = x.dtype
     v = np.empty(dims, dtype=dtyp)
@@ -2007,9 +2011,9 @@ class Chebyshev(ABCPolyBase):
     domain : (2,) array_like, optional
         Domain to use. The interval ``[domain[0], domain[1]]`` is mapped
         to the interval ``[window[0], window[1]]`` by shifting and scaling.
-        The default value is [-1, 1].
+        The default value is [-1., 1.].
     window : (2,) array_like, optional
-        Window, see `domain` for its use. The default value is [-1, 1].
+        Window, see `domain` for its use. The default value is [-1., 1.].
 
         .. versionadded:: 1.6.0
     symbol : str, optional

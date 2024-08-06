@@ -21,7 +21,7 @@ from numpy.random cimport bitgen_t
 from ._common cimport (POISSON_LAM_MAX, CONS_POSITIVE, CONS_NONE,
             CONS_NON_NEGATIVE, CONS_BOUNDED_0_1, CONS_BOUNDED_GT_0_1,
             CONS_BOUNDED_LT_0_1, CONS_GTE_1, CONS_GT_1, LEGACY_CONS_POISSON,
-            LEGACY_CONS_NON_NEGATVE_INBOUNDS_LONG,
+            LEGACY_CONS_NON_NEGATIVE_INBOUNDS_LONG,
             double_fill, cont, kahan_sum, cont_broadcast_3,
             check_array_constraint, check_constraint, disc, discrete_broadcast_iii,
             validate_output_shape
@@ -205,10 +205,13 @@ cdef class RandomState:
         self.set_state(state)
 
     def __reduce__(self):
-        ctor, name_tpl, _ = self._bit_generator.__reduce__()
-
         from ._pickle import __randomstate_ctor
-        return __randomstate_ctor, (name_tpl[0], ctor), self.get_state(legacy=False)
+        # The third argument containing the state is required here since
+        # RandomState contains state information in addition to the state
+        # contained in the bit generator that described the gaussian
+        # generator. This argument is passed to __setstate__ after the
+        # Generator is created.
+        return __randomstate_ctor, (self._bit_generator, ), self.get_state(legacy=False)
 
     cdef _initialize_bit_generator(self, bit_generator):
         self._bit_generator = bit_generator
@@ -954,7 +957,7 @@ cdef class RandomState:
         """
 
         # Format and Verify input
-        a = np.array(a, copy=False)
+        a = np.asarray(a)
         if a.ndim == 0:
             try:
                 # __index__ must return an integer by python rules.
@@ -1013,7 +1016,7 @@ cdef class RandomState:
                 idx = cdf.searchsorted(uniform_samples, side='right')
                 # searchsorted returns a scalar
                 # force cast to int for LLP64
-                idx = np.array(idx, copy=False).astype(np.long, casting='unsafe')
+                idx = np.asarray(idx).astype(np.long, casting='unsafe')
             else:
                 idx = self.randint(0, pop_size, size=shape)
         else:
@@ -3478,7 +3481,7 @@ cdef class RandomState:
 
         if not is_scalar:
             check_array_constraint(p_arr, 'p', CONS_BOUNDED_0_1)
-            check_array_constraint(n_arr, 'n', LEGACY_CONS_NON_NEGATVE_INBOUNDS_LONG)
+            check_array_constraint(n_arr, 'n', LEGACY_CONS_NON_NEGATIVE_INBOUNDS_LONG)
             if size is not None:
                 randoms = <np.ndarray>np.empty(size, np.long)
             else:
@@ -3504,7 +3507,7 @@ cdef class RandomState:
         _dp = PyFloat_AsDouble(p)
         _in = n
         check_constraint(_dp, 'p', CONS_BOUNDED_0_1)
-        check_constraint(<double>_in, 'n', LEGACY_CONS_NON_NEGATVE_INBOUNDS_LONG)
+        check_constraint(<double>_in, 'n', LEGACY_CONS_NON_NEGATIVE_INBOUNDS_LONG)
 
         if size is None:
             with self.lock:
@@ -3972,7 +3975,7 @@ cdef class RandomState:
             if lngood + lnbad < lnsample:
                 raise ValueError("ngood + nbad < nsample")
             out = disc(&legacy_random_hypergeometric, &self._bitgen, size, self.lock, 0, 3,
-                       lngood, 'ngood', LEGACY_CONS_NON_NEGATVE_INBOUNDS_LONG,
+                       lngood, 'ngood', LEGACY_CONS_NON_NEGATIVE_INBOUNDS_LONG,
                        lnbad, 'nbad', CONS_NON_NEGATIVE,
                        lnsample, 'nsample', CONS_GTE_1)
             # Match historical output type
@@ -3982,7 +3985,7 @@ cdef class RandomState:
             raise ValueError("ngood + nbad < nsample")
 
         out = discrete_broadcast_iii(&legacy_random_hypergeometric,&self._bitgen, size, self.lock,
-                                     ongood, 'ngood', LEGACY_CONS_NON_NEGATVE_INBOUNDS_LONG,
+                                     ongood, 'ngood', LEGACY_CONS_NON_NEGATIVE_INBOUNDS_LONG,
                                      onbad, 'nbad', CONS_NON_NEGATIVE,
                                      onsample, 'nsample', CONS_GTE_1)
         # Match historical output type

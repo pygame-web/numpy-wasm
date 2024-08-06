@@ -9,6 +9,7 @@ Basic operations
    :toctree: generated/
 
     copyto
+    ndim
     shape
     size
 
@@ -87,6 +88,7 @@ Splitting arrays
    dsplit
    hsplit
    vsplit
+   unstack
 
 Tiling arrays
 =============

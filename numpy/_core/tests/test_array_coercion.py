@@ -38,7 +38,7 @@ def arraylikes():
 
     yield subclass
 
-    class _SequenceLike():
+    class _SequenceLike:
         # Older NumPy versions, sometimes cared whether a protocol array was
         # also _SequenceLike.  This shouldn't matter, but keep it for now
         # for __array__ and not the others.
@@ -53,8 +53,10 @@ def arraylikes():
         def __init__(self, a):
             self.a = a
 
-        def __array__(self, dtype=None):
-            return self.a
+        def __array__(self, dtype=None, copy=None):
+            if dtype is None:
+                return self.a
+            return self.a.astype(dtype)
 
     yield param(ArrayDunder, id="__array__")
 
@@ -706,7 +708,7 @@ class TestArrayLikes:
             def __array_struct__(self):
                 pass
 
-            def __array__(self):
+            def __array__(self, dtype=None, copy=None):
                 pass
 
         arr = np.array(ArrayLike)
@@ -832,7 +834,7 @@ class TestSpecialAttributeLookupFailure:
 
     class WeirdArrayLike:
         @property
-        def __array__(self):
+        def __array__(self, dtype=None, copy=None):
             raise RuntimeError("oops!")
 
     class WeirdArrayInterface:

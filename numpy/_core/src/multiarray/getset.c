@@ -9,12 +9,13 @@
 #include "numpy/arrayobject.h"
 
 #include "npy_config.h"
-#include "npy_pycompat.h"
+
 #include "npy_import.h"
 
 #include "common.h"
 #include "conversion_utils.h"
 #include "ctors.h"
+#include "dtypemeta.h"
 #include "scalartypes.h"
 #include "descriptor.h"
 #include "flagsobject.h"
@@ -24,6 +25,8 @@
 #include "alloc.h"
 #include "npy_buffer.h"
 #include "shape.h"
+#include "multiarraymodule.h"
+#include "array_api_standard.h"
 
 /*******************  array attribute get and set routines ******************/
 
@@ -340,7 +343,7 @@ array_data_get(PyArrayObject *self, void *NPY_UNUSED(ignored))
 static PyObject *
 array_itemsize_get(PyArrayObject *self, void* NPY_UNUSED(ignored))
 {
-    return PyLong_FromLong((long) PyArray_DESCR(self)->elsize);
+    return PyLong_FromLong((long) PyArray_ITEMSIZE(self));
 }
 
 static PyObject *
@@ -384,16 +387,16 @@ array_descr_set(PyArrayObject *self, PyObject *arg, void *NPY_UNUSED(ignored))
 
     /* check that we are not reinterpreting memory containing Objects. */
     if (_may_have_objects(PyArray_DESCR(self)) || _may_have_objects(newtype)) {
-        static PyObject *checkfunc = NULL;
         PyObject *safe;
 
-        npy_cache_import("numpy._core._internal", "_view_is_safe", &checkfunc);
-        if (checkfunc == NULL) {
+        if (npy_cache_import_runtime(
+                "numpy._core._internal", "_view_is_safe",
+                &npy_runtime_imports._view_is_safe) == -1) {
             goto fail;
         }
 
-        safe = PyObject_CallFunction(checkfunc, "OO",
-                                     PyArray_DESCR(self), newtype);
+        safe = PyObject_CallFunction(npy_runtime_imports._view_is_safe,
+                                     "OO", PyArray_DESCR(self), newtype);
         if (safe == NULL) {
             goto fail;
         }
@@ -406,16 +409,16 @@ array_descr_set(PyArrayObject *self, PyObject *arg, void *NPY_UNUSED(ignored))
      */
     if (newtype->type_num == NPY_VOID &&
             PyDataType_ISUNSIZED(newtype) &&
-            newtype->elsize != PyArray_DESCR(self)->elsize) {
+            newtype->elsize != PyArray_ITEMSIZE(self)) {
         PyArray_DESCR_REPLACE(newtype);
         if (newtype == NULL) {
             return -1;
         }
-        newtype->elsize = PyArray_DESCR(self)->elsize;
+        newtype->elsize = PyArray_ITEMSIZE(self);
     }
 
     /* Changing the size of the dtype results in a shape change */
-    if (newtype->elsize != PyArray_DESCR(self)->elsize) {
+    if (newtype->elsize != PyArray_ITEMSIZE(self)) {
         /* forbidden cases */
         if (PyArray_NDIM(self) == 0) {
             PyErr_SetString(PyExc_ValueError,
@@ -434,7 +437,7 @@ array_descr_set(PyArrayObject *self, PyObject *arg, void *NPY_UNUSED(ignored))
         int axis = PyArray_NDIM(self) - 1;
         if (PyArray_DIMS(self)[axis] != 1 &&
                 PyArray_SIZE(self) != 0 &&
-                PyArray_STRIDES(self)[axis] != PyArray_DESCR(self)->elsize) {
+                PyArray_STRIDES(self)[axis] != PyArray_ITEMSIZE(self)) {
             PyErr_SetString(PyExc_ValueError,
                     "To change to a dtype of a different size, the last axis "
                     "must be contiguous");
@@ -443,22 +446,22 @@ array_descr_set(PyArrayObject *self, PyObject *arg, void *NPY_UNUSED(ignored))
 
         npy_intp newdim;
 
-        if (newtype->elsize < PyArray_DESCR(self)->elsize) {
+        if (newtype->elsize < PyArray_ITEMSIZE(self)) {
             /* if it is compatible, increase the size of the last axis */
             if (newtype->elsize == 0 ||
-                    PyArray_DESCR(self)->elsize % newtype->elsize != 0) {
+                    PyArray_ITEMSIZE(self) % newtype->elsize != 0) {
                 PyErr_SetString(PyExc_ValueError,
                         "When changing to a smaller dtype, its size must be a "
                         "divisor of the size of original dtype");
                 goto fail;
             }
-            newdim = PyArray_DESCR(self)->elsize / newtype->elsize;
+            newdim = PyArray_ITEMSIZE(self) / newtype->elsize;
             PyArray_DIMS(self)[axis] *= newdim;
             PyArray_STRIDES(self)[axis] = newtype->elsize;
         }
-        else /* newtype->elsize > PyArray_DESCR(self)->elsize */ {
+        else /* newtype->elsize > PyArray_ITEMSIZE(self) */ {
             /* if it is compatible, decrease the size of the relevant axis */
-            newdim = PyArray_DIMS(self)[axis] * PyArray_DESCR(self)->elsize;
+            newdim = PyArray_DIMS(self)[axis] * PyArray_ITEMSIZE(self);
             if ((newdim % newtype->elsize) != 0) {
                 PyErr_SetString(PyExc_ValueError,
                         "When changing to a larger dtype, its size must be a "
@@ -523,7 +526,7 @@ array_struct_get(PyArrayObject *self, void *NPY_UNUSED(ignored))
     inter->two = 2;
     inter->nd = PyArray_NDIM(self);
     inter->typekind = PyArray_DESCR(self)->kind;
-    inter->itemsize = PyArray_DESCR(self)->elsize;
+    inter->itemsize = PyArray_ITEMSIZE(self);
     inter->flags = PyArray_FLAGS(self);
     if (inter->flags & NPY_ARRAY_WARN_ON_WRITE) {
         /* Export a warn-on-write array as read-only */
@@ -806,7 +809,7 @@ array_flat_set(PyArrayObject *self, PyObject *val, void *NPY_UNUSED(ignored))
         goto exit;
     }
     swap = PyArray_ISNOTSWAPPED(self) != PyArray_ISNOTSWAPPED(arr);
-    copyswap = PyArray_DESCR(self)->f->copyswap;
+    copyswap = PyDataType_GetArrFuncs(PyArray_DESCR(self))->copyswap;
     if (PyDataType_REFCHK(PyArray_DESCR(self))) {
         while (selfit->index < selfit->size) {
             PyArray_Item_XDECREF(selfit->dataptr, PyArray_DESCR(self));
@@ -880,12 +883,6 @@ array_itemset(PyArrayObject *self, PyObject *args)
                     "`itemset` was removed from the ndarray class in "
                     "NumPy 2.0. Use `arr[index] = value` instead.");
     return NULL;
-}
-
-static PyObject *
-array_device(PyArrayObject *self, void *NPY_UNUSED(ignored))
-{
-    return PyUnicode_FromString("cpu");
 }
 
 NPY_NO_EXPORT PyGetSetDef array_getsetlist[] = {

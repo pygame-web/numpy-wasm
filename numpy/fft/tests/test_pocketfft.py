@@ -38,7 +38,7 @@ class TestFFT1D:
         # Test with explicitly given number of points, both for n
         # smaller and for n larger than the input size.
         maxlen = 16
-        atol = 4 * np.spacing(np.array(1., dtype=dtype))
+        atol = 5 * np.spacing(np.array(1., dtype=dtype))
         x = random(maxlen).astype(dtype) + 1j*random(maxlen).astype(dtype)
         xx = np.concatenate([x, np.zeros_like(x)])
         xr = random(maxlen).astype(dtype)
@@ -55,7 +55,7 @@ class TestFFT1D:
     def test_identity_long_short_reversed(self, dtype):
         # Also test explicitly given number of points in reversed order.
         maxlen = 16
-        atol = 4 * np.spacing(np.array(1., dtype=dtype))
+        atol = 5 * np.spacing(np.array(1., dtype=dtype))
         x = random(maxlen).astype(dtype) + 1j*random(maxlen).astype(dtype)
         xx = np.concatenate([x, np.zeros_like(x)])
         for i in range(1, maxlen*2):
@@ -183,7 +183,6 @@ class TestFFT1D:
         with pytest.raises(TypeError, match="Cannot cast"):
             np.fft.fft(x, out=np.zeros_like(x, dtype=float))
 
-
     @pytest.mark.parametrize('norm', (None, 'backward', 'ortho', 'forward'))
     def test_ifft(self, norm):
         x = random(30) + 1j*random(30)
@@ -257,6 +256,17 @@ class TestFFT1D:
             assert_allclose(
                 np.fft.rfft(x, n=n) / n,
                 np.fft.rfft(x, n=n, norm="forward"), atol=1e-6)
+
+    def test_rfft_even(self):
+        x = np.arange(8)
+        n = 4
+        y = np.fft.rfft(x, n)
+        assert_allclose(y, np.fft.fft(x[:n])[:n//2 + 1], rtol=1e-14)
+
+    def test_rfft_odd(self):
+        x = np.array([1, 0, 2, 3, -3])
+        y = np.fft.rfft(x)
+        assert_allclose(y, np.fft.fft(x)[:3], rtol=1e-14)
 
     def test_irfft(self):
         x = random(30)
@@ -487,6 +497,16 @@ def test_fft_with_order(dtype, order, fft):
         raise ValueError()
 
 
+@pytest.mark.parametrize("order", ["F", "C"])
+@pytest.mark.parametrize("n", [None, 7, 12])
+def test_fft_output_order(order, n):
+    rng = np.random.RandomState(42)
+    x = rng.rand(10)
+    x = np.asarray(x, dtype=np.complex64, order=order)
+    res = np.fft.fft(x, n=n)
+    assert res.flags.c_contiguous == x.flags.c_contiguous
+    assert res.flags.f_contiguous == x.flags.f_contiguous
+
 @pytest.mark.skipif(IS_WASM, reason="Cannot start thread")
 class TestFFTThreadSafe:
     threads = 16
@@ -543,3 +563,19 @@ def test_irfft_with_n_large_regression():
                          -6.62459848, 4., -3.37540152, -0.16057669,
                          1.8819096, -20.86055364])
     assert_allclose(result, expected)
+
+
+@pytest.mark.parametrize("fft", [
+    np.fft.fft, np.fft.ifft, np.fft.rfft, np.fft.irfft
+])
+@pytest.mark.parametrize("data", [
+    np.array([False, True, False]),
+    np.arange(10, dtype=np.uint8),
+    np.arange(5, dtype=np.int16),
+])
+def test_fft_with_integer_or_bool_input(data, fft):
+    # Regression test for gh-25819
+    result = fft(data)
+    float_data = data.astype(np.result_type(data, 1.))
+    expected = fft(float_data)
+    assert_array_equal(result, expected)

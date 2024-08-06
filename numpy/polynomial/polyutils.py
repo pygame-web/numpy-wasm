@@ -95,6 +95,7 @@ def as_series(alist, trim=True):
 
     Examples
     --------
+    >>> import numpy as np
     >>> from numpy.polynomial import polyutils as pu
     >>> a = np.arange(4)
     >>> pu.as_series(a)
@@ -113,7 +114,7 @@ def as_series(alist, trim=True):
     [array([2.]), array([1.1, 0. ])]
 
     """
-    arrays = [np.array(a, ndmin=1, copy=False) for a in alist]
+    arrays = [np.array(a, ndmin=1, copy=None) for a in alist]
     for a in arrays:
         if a.size == 0:
             raise ValueError("Coefficient array is empty")
@@ -218,6 +219,7 @@ def getdomain(x):
 
     Examples
     --------
+    >>> import numpy as np
     >>> from numpy.polynomial import polyutils as pu
     >>> points = np.arange(4)**2 - 5; points
     array([-5, -4, -1,  4])
@@ -323,6 +325,7 @@ def mapdomain(x, old, new):
 
     Examples
     --------
+    >>> import numpy as np
     >>> from numpy.polynomial import polyutils as pu
     >>> old_domain = (-1,1)
     >>> new_domain = (0,2*np.pi)
@@ -346,7 +349,8 @@ def mapdomain(x, old, new):
     array([-1.0+1.j , -0.6+0.6j, -0.2+0.2j,  0.2-0.2j,  0.6-0.6j,  1.0-1.j ]) # may vary
 
     """
-    x = np.asanyarray(x)
+    if type(x) not in (int, float, complex) and not isinstance(x, np.generic):
+        x = np.asanyarray(x)
     off, scl = mapparms(old, new)
     return off + scl*x
 
@@ -413,7 +417,7 @@ def _vander_nd(vander_fs, points, degrees):
         raise ValueError("Unable to guess a dtype or shape when no points are given")
 
     # convert to the same shape and type
-    points = tuple(np.array(tuple(points), copy=False) + 0.0)
+    points = tuple(np.asarray(tuple(points)) + 0.0)
 
     # produce the vandermonde matrix for each dimension, placing the last
     # axis of each in an independent trailing axis of the output
@@ -479,7 +483,7 @@ def _valnd(val_f, c, *args):
     """
     args = [np.asanyarray(a) for a in args]
     shape0 = args[0].shape
-    if not all((a.shape == shape0 for a in args[1:])):
+    if not all(a.shape == shape0 for a in args[1:]):
         if len(args) == 3:
             raise ValueError('x, y, z are incompatible')
         elif len(args) == 2:

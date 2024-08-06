@@ -11,7 +11,6 @@
 #include "abstractdtypes.h"
 #include "dispatching.h"
 #include "dtypemeta.h"
-#include "common_dtype.h"
 #include "convert_datatype.h"
 
 #include "legacy_array_method.h"  /* For `get_wrapped_legacy_ufunc_loop`. */
@@ -178,7 +177,7 @@ resolve_descriptors_with_scalars(
 {
     int value_range = 0;
 
-    npy_bool first_is_pyint = dtypes[0] == &PyArray_PyIntAbstractDType;
+    npy_bool first_is_pyint = dtypes[0] == &PyArray_PyLongDType;
     int arr_idx = first_is_pyint? 1 : 0;
     int scalar_idx = first_is_pyint? 0 : 1;
     PyObject *scalar = input_scalars[scalar_idx];
@@ -294,7 +293,7 @@ get_loop(PyArrayMethod_Context *context,
 
 
 /*
- * Machinery to add the python integer to NumPy intger comparsisons as well
+ * Machinery to add the python integer to NumPy integer comparsisons as well
  * as a special promotion to special case Python int with Python int
  * comparisons.
  */
@@ -328,7 +327,7 @@ template<COMP comp>
 static int
 add_dtype_loops(PyObject *umath, PyArrayMethod_Spec *spec, PyObject *info)
 {
-    PyArray_DTypeMeta *PyInt = &PyArray_PyIntAbstractDType;
+    PyArray_DTypeMeta *PyInt = &PyArray_PyLongDType;
 
     PyObject *name = PyUnicode_FromString(comp_name(comp));
     if (name == nullptr) {
@@ -423,7 +422,7 @@ init_special_int_comparisons(PyObject *umath)
      * resolver ensures native byte order/canonical representation.
      */
     PyType_Slot slots[] = {
-        {_NPY_METH_get_loop, nullptr},
+        {NPY_METH_get_loop, nullptr},
         {_NPY_METH_resolve_descriptors_with_scalars,
              (void *)&resolve_descriptors_with_scalars},
         {0, NULL},
@@ -442,7 +441,7 @@ init_special_int_comparisons(PyObject *umath)
      * `np.equal(2, 4)` (with two python integers) use an object loop.
      */
     PyObject *dtype_tuple = PyTuple_Pack(3,
-            &PyArray_PyIntAbstractDType, &PyArray_PyIntAbstractDType, Bool);
+            &PyArray_PyLongDType, &PyArray_PyLongDType, Bool);
     if (dtype_tuple == NULL) {
         goto finish;
     }

@@ -17,7 +17,7 @@ Abstract
 We are moving the SIMD intrinsic framework, Universal Intrinsics, from C to
 C++. We have also moved to Meson as the build system. The Google Highway
 intrinsics project is proposing we use Highway instead of our Universal
-Intrinsics as described in `NEP 38`_. This is a complex and multi-faceted
+Intrinsics as described in :ref:`NEP 38 <NEP38>`. This is a complex and multi-faceted
 decision - this NEP is an attempt to describe the trade-offs involved and
 what would need to be done.
 
@@ -101,7 +101,7 @@ merged clang-cl support a while back (see `gh-20866`_), and SciPy builds with
 Mingw-w64. It may however impact other redistributors or end users who build
 from source on Windows.
 
-In response to the earlier dicussions around this NEP, Highway is now
+In response to the earlier discussions around this NEP, Highway is now
 dual-licensed as Apache 2 / BSD-3.
 
 
@@ -350,7 +350,6 @@ References and Footnotes
    this NEP as an example) or licensed under the `Open Publication License`_.
 
 .. _Open Publication License: https://www.opencontent.org/openpub/
-.. _`NEP 38`: https://numpy.org/neps/nep-0038-SIMD-optimizations.html
 .. _`gh-20866`: https://github.com/numpy/numpy/pull/20866
 .. _`gh-21057`: https://github.com/numpy/numpy/pull/21057
 .. _`gh-23096`: https://github.com/numpy/numpy/pull/23096

@@ -249,6 +249,7 @@ def english_upper(s):
 
     Examples
     --------
+    >>> import numpy as np
     >>> from numpy.lib.utils import english_upper
     >>> s = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_'
     >>> english_upper(s)
@@ -953,6 +954,7 @@ defdict = {
     Ufunc(1, 1, None,
           docstrings.get('numpy._core.umath.ceil'),
           None,
+          TD(bints),
           TD('e', f='ceil', astype={'e': 'f'}),
           TD(inexactvec, dispatch=[('loops_unary_fp', 'fd')]),
           TD('fdg', f='ceil'),
@@ -962,6 +964,7 @@ defdict = {
     Ufunc(1, 1, None,
           docstrings.get('numpy._core.umath.trunc'),
           None,
+          TD(bints),
           TD('e', f='trunc', astype={'e': 'f'}),
           TD(inexactvec, dispatch=[('loops_unary_fp', 'fd')]),
           TD('fdg', f='trunc'),
@@ -978,6 +981,7 @@ defdict = {
     Ufunc(1, 1, None,
           docstrings.get('numpy._core.umath.floor'),
           None,
+          TD(bints),
           TD('e', f='floor', astype={'e': 'f'}),
           TD(inexactvec, dispatch=[('loops_unary_fp', 'fd')]),
           TD('fdg', f='floor'),
@@ -1170,6 +1174,26 @@ defdict = {
           docstrings.get('numpy._core.umath.isspace'),
           None,
           ),
+'isalnum':
+    Ufunc(1, 1, False_,
+          docstrings.get('numpy._core.umath.isalnum'),
+          None,
+          ),
+'islower':
+    Ufunc(1, 1, False_,
+          docstrings.get('numpy._core.umath.islower'),
+          None,
+          ),
+'isupper':
+    Ufunc(1, 1, False_,
+          docstrings.get('numpy._core.umath.isupper'),
+          None,
+          ),
+'istitle':
+    Ufunc(1, 1, False_,
+          docstrings.get('numpy._core.umath.istitle'),
+          None,
+          ),
 'isdecimal':
     Ufunc(1, 1, False_,
           docstrings.get('numpy._core.umath.isdecimal'),
@@ -1195,9 +1219,19 @@ defdict = {
           docstrings.get('numpy._core.umath.count'),
           None,
           ),
+'index':
+    Ufunc(4, 1, None,
+          docstrings.get('numpy._core.umath.index'),
+          None,
+          ),
+'rindex':
+    Ufunc(4, 1, None,
+          docstrings.get('numpy._core.umath.rindex'),
+          None,
+          ),
 '_replace':
     Ufunc(4, 1, None,
-          docstrings.get('numpy.core.umath._replace'),
+          docstrings.get('numpy._core.umath._replace'),
           None,
           ),
 'startswith':
@@ -1238,6 +1272,56 @@ defdict = {
 '_rstrip_whitespace':
     Ufunc(1, 1, None,
           docstrings.get('numpy._core.umath._rstrip_whitespace'),
+          None,
+          ),
+'_expandtabs_length':
+    Ufunc(2, 1, None,
+          docstrings.get('numpy._core.umath._expandtabs_length'),
+          None,
+          ),
+'_expandtabs':
+    Ufunc(2, 1, None,
+          docstrings.get('numpy._core.umath._expandtabs'),
+          None,
+          ),
+'_center':
+    Ufunc(3, 1, None,
+          docstrings.get('numpy._core.umath._center'),
+          None,
+          ),
+'_ljust':
+    Ufunc(3, 1, None,
+          docstrings.get('numpy._core.umath._ljust'),
+          None,
+          ),
+'_rjust':
+    Ufunc(3, 1, None,
+          docstrings.get('numpy._core.umath._rjust'),
+          None,
+          ),
+'_zfill':
+    Ufunc(2, 1, None,
+          docstrings.get('numpy._core.umath._zfill'),
+          None,
+          ),
+'_partition_index':
+    Ufunc(3, 3, None,
+          docstrings.get('numpy._core.umath._partition_index'),
+          None,
+          ),
+'_rpartition_index':
+    Ufunc(3, 3, None,
+          docstrings.get('numpy._core.umath._rpartition_index'),
+          None,
+          ),
+'_partition':
+    Ufunc(2, 3, None,
+          docstrings.get('numpy._core.umath._partition'),
+          None,
+          ),
+'_rpartition':
+    Ufunc(2, 3, None,
+          docstrings.get('numpy._core.umath._rpartition'),
           None,
           ),
 }
@@ -1296,10 +1380,9 @@ def make_arrays(funcdict):
         funclist = []
         datalist = []
         siglist = []
-        k = 0
         sub = 0
 
-        for t in uf.type_descriptions:
+        for k, t in enumerate(uf.type_descriptions):
             cfunc_alias = t.cfunc_alias if t.cfunc_alias else name
             cfunc_fname = None
             if t.func_data is FullTypeDescr:
@@ -1359,8 +1442,6 @@ def make_arrays(funcdict):
             for x in t.in_ + t.out:
                 siglist.append('NPY_%s' % (english_upper(chartoname[x]),))
 
-            k += 1
-
         if funclist or siglist or datalist:
             funcnames = ', '.join(funclist)
             signames = ', '.join(siglist)
@@ -1370,7 +1451,7 @@ def make_arrays(funcdict):
                 % (name, funcnames))
             code1list.append("static void * %s_data[] = {%s};"
                             % (name, datanames))
-            code1list.append("static char %s_signatures[] = {%s};"
+            code1list.append("static const char %s_signatures[] = {%s};"
                             % (name, signames))
             uf.empty = False
         else:

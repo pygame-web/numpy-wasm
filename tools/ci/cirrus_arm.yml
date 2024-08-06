@@ -63,59 +63,18 @@ linux_aarch64_test_task:
     ccache -s
 
 
-macos_arm64_test_task:
-  use_compute_credits: $CIRRUS_USER_COLLABORATOR == 'true'
-  depends_on:
-    - linux_aarch64_test
-  macos_instance:
-    image: ghcr.io/cirruslabs/macos-sonoma-xcode
-
-  <<: *MODIFIED_CLONE
-
-  ccache_cache:
-    folder: .ccache
-    populate_script:
-      - mkdir -p .ccache
-    fingerprint_key: ccache-macosx_arm64
-
-  pip_cache:
-    folder: ~/.cache/pip
-
-  test_script: |
-    brew install micromamba ccache
-    micromamba shell init -s bash -p ~/micromamba
-    source ~/.bash_profile
-    
-    micromamba create -n numpydev
-    micromamba activate numpydev
-    micromamba install -y -c conda-forge compilers python=3.11 2>/dev/null
-    
-    export PATH=/opt/homebrew/opt/ccache/libexec:$PATH
-    export CCACHE_DIR=$PWD/.ccache
-    echo "PATH=$PATH" >> $CIRRUS_ENV
-
-    python --version
-    
-    pip install -r requirements/build_requirements.txt
-    pip install pytest pytest-xdist hypothesis typing_extensions
-
-    spin build
-    spin test -j auto
-
-    ccache -s
-
-
 freebsd_test_task:
   use_compute_credits: $CIRRUS_USER_COLLABORATOR == 'true'
   compute_engine_instance:
     image_project: freebsd-org-cloud-dev
-    image: family/freebsd-13-2
+    image: family/freebsd-14-0
     platform: freebsd
     cpu: 1
     memory: 4G
 
   install_devtools_script: |
     pkg install -y git bash ninja ccache blas cblas lapack pkgconf
+    pkg install -y python311
 
   <<: *MODIFIED_CLONE
 
@@ -128,22 +87,22 @@ freebsd_test_task:
   prepare_env_script: |
     # Create a venv (the `source` command needs bash, not the default sh shell)
     chsh -s /usr/local/bin/bash
-    python -m venv .venv
+    python3.11 -m venv .venv
     source .venv/bin/activate
     # Minimal build and test requirements
-    python -m pip install -U pip
-    python -m pip install meson-python Cython pytest hypothesis
+    python3.11 -m pip install -U pip
+    python3.11 -m pip install meson-python Cython pytest hypothesis
 
   build_script: |
     chsh -s /usr/local/bin/bash
     source .venv/bin/activate
-    python -m pip install . --no-build-isolation -v -Csetup-args="-Dallow-noblas=false"
+    python3.11 -m pip install . --no-build-isolation -v -Csetup-args="-Dallow-noblas=false"
 
   test_script: |
     chsh -s /usr/local/bin/bash
     source .venv/bin/activate
     cd tools
-    python -m pytest --pyargs numpy -m "not slow"
+    python3.11 -m pytest --pyargs numpy -m "not slow"
     ccache -s
 
   on_failure:

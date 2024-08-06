@@ -97,6 +97,7 @@ class format_parser:
 
     Examples
     --------
+    >>> import numpy as np
     >>> np.rec.format_parser(['<f8', '<i4'], ['col1', 'col2'],
     ...                      ['T1', 'T2']).dtype
     dtype([(('T1', 'col1'), '<f8'), (('T2', 'col2'), '<i4')])
@@ -357,6 +358,7 @@ class recarray(ndarray):
     --------
     Create an array with two fields, ``x`` and ``y``:
 
+    >>> import numpy as np
     >>> x = np.array([(1.0, 2), (3.0, 4)], dtype=[('x', '<f8'), ('y', '<i8')])
     >>> x
     array([(1., 2), (3., 4)], dtype=[('x', '<f8'), ('y', '<i8')])
@@ -583,7 +585,7 @@ def fromarrays(arrayList, dtype=None, shape=None, formats=None,
         ``arrayList[0]``.
     formats, names, titles, aligned, byteorder :
         If `dtype` is ``None``, these arguments are passed to
-        `numpy.format_parser` to construct a dtype. See that function for
+        `numpy.rec.format_parser` to construct a dtype. See that function for
         detailed documentation.
 
     Returns

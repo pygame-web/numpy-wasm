@@ -1,6 +1,9 @@
 #ifndef NUMPY_CORE_SRC_MULTIARRAY_DTYPEMETA_H_
 #define NUMPY_CORE_SRC_MULTIARRAY_DTYPEMETA_H_
 
+#define _MULTIARRAYMODULE
+#include "numpy/arrayobject.h"
+
 #include "array_method.h"
 #include "dtype_traversal.h"
 
@@ -8,7 +11,7 @@
 extern "C" {
 #endif
 
-#include "numpy/_dtype_api.h"
+#include "numpy/dtype_api.h"
 
 /* DType flags, currently private, since we may just expose functions
    Other publicly visible flags are in _dtype_api.h                   */
@@ -17,17 +20,17 @@ extern "C" {
 
 typedef struct {
     /* DType methods, these could be moved into its own struct */
-    discover_descr_from_pyobject_function *discover_descr_from_pyobject;
-    is_known_scalar_type_function *is_known_scalar_type;
-    default_descr_function *default_descr;
-    common_dtype_function *common_dtype;
-    common_instance_function *common_instance;
-    ensure_canonical_function *ensure_canonical;
+    PyArrayDTypeMeta_DiscoverDescrFromPyobject *discover_descr_from_pyobject;
+    PyArrayDTypeMeta_IsKnownScalarType *is_known_scalar_type;
+    PyArrayDTypeMeta_DefaultDescriptor *default_descr;
+    PyArrayDTypeMeta_CommonDType *common_dtype;
+    PyArrayDTypeMeta_CommonInstance *common_instance;
+    PyArrayDTypeMeta_EnsureCanonical *ensure_canonical;
     /*
      * Currently only used for experimental user DTypes.
      */
-    setitemfunction *setitem;
-    getitemfunction *getitem;
+    PyArrayDTypeMeta_SetItem *setitem;
+    PyArrayDTypeMeta_GetItem *getitem;
     /*
      * Either NULL or fetches a clearing function.  Clearing means deallocating
      * any referenced data and setting it to a safe state.  For Python objects
@@ -40,7 +43,7 @@ typedef struct {
      * acceptable for  NPY_ITEM_REFCOUNT to indicate references that are not
      * Python objects.
      */
-    get_traverse_loop_function *get_clear_loop;
+    PyArrayMethod_GetTraverseLoop *get_clear_loop;
     /*
        Either NULL or a function that sets a function pointer to a traversal
        loop that fills an array with zero values appropriate for the dtype. If
@@ -57,13 +60,13 @@ typedef struct {
        will not work correctly for arrays holding references. If you need to do
        that, clear the array first.
     */
-    get_traverse_loop_function *get_fill_zero_loop;
+    PyArrayMethod_GetTraverseLoop *get_fill_zero_loop;
     /*
      * Either NULL or a function that performs finalization on a dtype, either
      * returning that dtype or a newly created instance that has the same
      * parameters, if any, as the operand dtype.
      */
-    finalize_descr_function *finalize_descr;
+    PyArrayDTypeMeta_FinalizeDescriptor *finalize_descr;
     /*
      * The casting implementation (ArrayMethod) to convert between two
      * instances of this DType, stored explicitly for fast access:
@@ -152,10 +155,11 @@ python_builtins_are_known_scalar_types(
 
 NPY_NO_EXPORT int
 dtypemeta_wrap_legacy_descriptor(
-        PyArray_Descr *dtypem, const char *name, const char *alias);
+    _PyArray_LegacyDescr *descr, PyArray_ArrFuncs *arr_funcs,
+    PyTypeObject *dtype_super_class, const char *name, const char *alias);
 
 NPY_NO_EXPORT void
-initialize_legacy_dtypemeta_aliases(PyArray_Descr **_builtin_descrs);
+initialize_legacy_dtypemeta_aliases(_PyArray_LegacyDescr **_builtin_descrs);
 
 /*
  * NumPy's builtin DTypes:
@@ -253,5 +257,34 @@ extern PyArray_DTypeMeta PyArray_StringDType;
 #ifdef __cplusplus
 }
 #endif
+
+
+/* Internal version see dtypmeta.c for more information. */
+static inline PyArray_ArrFuncs *
+PyDataType_GetArrFuncs(const PyArray_Descr *descr)
+{
+    return &NPY_DT_SLOTS(NPY_DTYPE(descr))->f;
+}
+
+/*
+ * Internal versions.  Note that `PyArray_Pack` or `PyArray_Scalar` are often
+ * preferred (PyArray_Pack knows how to cast and deal with arrays,
+ * PyArray_Scalar will convert to the Python type).
+ */
+static inline PyObject *
+PyArray_GETITEM(const PyArrayObject *arr, const char *itemptr)
+{
+    return PyDataType_GetArrFuncs(((PyArrayObject_fields *)arr)->descr)->getitem(
+            (void *)itemptr, (PyArrayObject *)arr);
+}
+
+static inline int
+PyArray_SETITEM(PyArrayObject *arr, char *itemptr, PyObject *v)
+{
+    return PyDataType_GetArrFuncs(((PyArrayObject_fields *)arr)->descr)->setitem(
+            v, itemptr, arr);
+}
+
+
 
 #endif  /* NUMPY_CORE_SRC_MULTIARRAY_DTYPEMETA_H_ */

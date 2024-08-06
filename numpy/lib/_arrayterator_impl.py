@@ -66,6 +66,7 @@ class Arrayterator:
 
     Examples
     --------
+    >>> import numpy as np
     >>> a = np.arange(3 * 4 * 5 * 6).reshape(3, 4, 5, 6)
     >>> a_itor = np.lib.Arrayterator(a, 2)
     >>> a_itor.shape
@@ -125,7 +126,7 @@ class Arrayterator:
             out.stop[i] = min(stop, out.stop[i])
         return out
 
-    def __array__(self):
+    def __array__(self, dtype=None, copy=None):
         """
         Return corresponding data.
 

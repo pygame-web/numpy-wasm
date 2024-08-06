@@ -162,8 +162,6 @@ following hold::
     np.bool_(True) + 1 == np.int64(2)
     True + np.uint8(2) == np.uint8(3)
 
-.. _nep50_comparison_table::
-
 Note that while this NEP uses simple operators as example, the rules described
 generally apply to all of NumPy operations.
 
@@ -193,7 +191,7 @@ arrays that are not 0-D, such as ``array([2])``.
    * - ``array([1], uint8) + int64(1)`` or
 
        ``array([1], uint8) + array(1, int64)``
-     - ``array([2], unit8)``
+     - ``array([2], uint8)``
      - ``array([2], int64)`` [T2]_
    * - ``array([1.], float32) + float64(1.)`` or
 
